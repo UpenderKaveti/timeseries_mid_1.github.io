@@ -1,0 +1,261 @@
+[
+  {
+    "objectID": "index.html#dataset-source",
+    "href": "index.html#dataset-source",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Dataset Source:",
+    "text": "Dataset Source:\n\nhttps://fred.stlouisfed.org/series/AWHMAN\nhttps://fred.stlouisfed.org/series/AWHAEGP"
+  },
+  {
+    "objectID": "index.html#libraries",
+    "href": "index.html#libraries",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Libraries",
+    "text": "Libraries\n\n# Load necessary libraries\nlibrary(reprex)\nlibrary(fredr)\nlibrary(zoo)\nlibrary(ggplot2)\nlibrary(changepoint) \nlibrary(imputeTS)\nlibrary(forecast)\nlibrary(bfast) \nlibrary(tsbox) \nlibrary(tseries)"
+  },
+  {
+    "objectID": "index.html#loading-data",
+    "href": "index.html#loading-data",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Loading Data",
+    "text": "Loading Data\n\n# Set FRED API key\nfredr_set_key(\"ad8fa632ef9ee5e564d414be20b7766b\")\n\n# Fetch datasets from FRED\nawhman &lt;- fredr(series_id = \"AWHMAN\")\nawhaegp &lt;- fredr(series_id = \"AWHAEGP\")\n\n# Convert dates to Date class\nawhman$date &lt;- as.Date(awhman$date)\nawhaegp$date &lt;- as.Date(awhaegp$date)"
+  },
+  {
+    "objectID": "index.html#plots-of-the-data",
+    "href": "index.html#plots-of-the-data",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Plots of the data",
+    "text": "Plots of the data\n\n# Plot individual datasets\nggplot() +\n  geom_line(data = awhman, aes(x = date, y = value), color = \"blue\") +\n  labs(title = \"AWHMAN Dataset\", x = \"Date\", y = \"Value\") +\n  theme_minimal()"
+  },
+  {
+    "objectID": "index.html#plots-of-the-data-1",
+    "href": "index.html#plots-of-the-data-1",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Plots of the data",
+    "text": "Plots of the data\n\nggplot() +\n  geom_line(data = awhaegp, aes(x = date, y = value), color = \"red\") +\n  labs(title = \"AWHAEGP Dataset\", x = \"Date\", y = \"Value\") +\n  theme_minimal()"
+  },
+  {
+    "objectID": "index.html#facet-grid-plot",
+    "href": "index.html#facet-grid-plot",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Facet Grid Plot",
+    "text": "Facet Grid Plot\n\n# Determine the start date of the covariate dataset\ncovariate_dataset_start_date &lt;- min(awhaegp$date)\n\n# Subset the main dataset from the start date of the covariate dataset\nawhman_subset &lt;- subset(awhman, date &gt;= covariate_dataset_start_date)\n\n# Merge datasets\nmerged_data &lt;- merge(awhman_subset, awhaegp, by = \"date\", all = TRUE)"
+  },
+  {
+    "objectID": "index.html#facet-grid-plot-1",
+    "href": "index.html#facet-grid-plot-1",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Facet Grid Plot",
+    "text": "Facet Grid Plot\n\n# Plot merged dataset with facet grid\nggplot(merged_data, aes(x = date)) +  geom_line(aes(y = value.x, color = \"AWHMAN\")) +  geom_line(aes(y = value.y, color = \"AWHAEGP\")) +\n  labs(title = \"Merged Dataset (AWHMAN and AWHAEGP)\",       x = \"Date\", y = \"Value\", color = \"Dataset\") +  scale_color_manual(values = c(\"blue\", \"red\")) +  theme_minimal() +  facet_grid(. ~ \"Merged Dataset\")"
+  },
+  {
+    "objectID": "index.html#adf",
+    "href": "index.html#adf",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "ADF",
+    "text": "ADF\n\nadf_result_value_x &lt;- adf.test(merged_data$value.x, alternative = \"stationary\")\nprint(adf_result_value_x)\n\n\n    Augmented Dickey-Fuller Test\n\ndata:  merged_data$value.x\nDickey-Fuller = -2.0062, Lag order = 5, p-value = 0.5734\nalternative hypothesis: stationary\n\nadf_result_value_y &lt;- adf.test(merged_data$value.y, alternative = \"stationary\")\nprint(adf_result_value_y)\n\n\n    Augmented Dickey-Fuller Test\n\ndata:  merged_data$value.y\nDickey-Fuller = -1.7612, Lag order = 5, p-value = 0.6762\nalternative hypothesis: stationary"
+  },
+  {
+    "objectID": "index.html#seasonal-decomposition",
+    "href": "index.html#seasonal-decomposition",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Seasonal decomposition",
+    "text": "Seasonal decomposition\n\ndecomposed &lt;- decompose(ts(merged_data$value.y, frequency = 12), type = \"multiplicative\")\ntrend &lt;- decomposed$trend\ntrend_df &lt;- data.frame(date = time(trend), value = coredata(trend), component = \"Trend\")\nggplot(trend_df, aes(x = date, y = value)) +  geom_line(color = \"blue\") +  labs(title = \"Trend Component\", x = \"Date\", y = \"Value\") +  theme_minimal()"
+  },
+  {
+    "objectID": "index.html#seasonal-decomposition-1",
+    "href": "index.html#seasonal-decomposition-1",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Seasonal decomposition",
+    "text": "Seasonal decomposition\n\nseasonal &lt;- decomposed$seasonal\n\nseasonal_df &lt;- data.frame(date = time(seasonal), value = coredata(seasonal), component = \"Seasonal\")\n\n# Performing ADF for stationarity\nseries_to_test &lt;- merged_data$value.x\nseasonal_lag &lt;- 12  # Common for monthly data with annual seasonality\nd &lt;- 0  # Regular differencing\nD &lt;- 0  # Seasonal differencing\n\n# Regular differencing loop\nrepeat {\n  adf_test_result &lt;- adf.test(series_to_test, alternative = \"stationary\")\n  \n  if (adf_test_result$p.value &lt; 0.05 || d &gt;= 2) {  # Adjust the limit as per your criteria\n    break\n  } else {\n    series_to_test &lt;- diff(series_to_test, differences = 1)\n    d &lt;- d + 1\n  }\n}\n\n# Check if further seasonal differencing is needed\nif (d &lt;= 2) {  # Proceed only if we haven't excessively differenced\n  repeat {\n    adf_test_result &lt;- adf.test(series_to_test, alternative = \"stationary\")\n    \n    if (adf_test_result$p.value &lt; 0.05 || D &gt;= 1) {  # Typically, D &gt; 1 is rare\n      break\n    } else {\n      # Apply seasonal differencing\n      series_to_test &lt;- diff(series_to_test, lag = seasonal_lag, differences = 1)\n      D &lt;- D + 1\n    }\n  }\n}\n\n# Display the results\ncat(\"Regular Differencing (d):\", d, \"\\n\")\n\nRegular Differencing (d): 1 \n\ncat(\"Seasonal Differencing (D) with lag\", seasonal_lag, \":\", D, \"\\n\")\n\nSeasonal Differencing (D) with lag 12 : 0"
+  },
+  {
+    "objectID": "index.html#seasonal-plot",
+    "href": "index.html#seasonal-plot",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Seasonal Plot",
+    "text": "Seasonal Plot\n\n# Plot seasonal component\nggplot(seasonal_df, aes(x = date, y = value)) +\n  geom_line(color = \"red\") +\n  labs(title = \"Seasonal Component\", x = \"Date\", y = \"Value\") +\n  theme_minimal()"
+  },
+  {
+    "objectID": "index.html#acf",
+    "href": "index.html#acf",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "ACF",
+    "text": "ACF\n\n# ACF estimates\nacf_result &lt;- acf(merged_data$value.y, plot = FALSE)\nlag_values &lt;- c(1, 2, 3)\nacf_estimates &lt;- acf_result$acf[lag_values]\nacf_result &lt;- acf(merged_data$value.y, main = \"Autocorrelation Function (ACF)\")"
+  },
+  {
+    "objectID": "index.html#pacf",
+    "href": "index.html#pacf",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "PACF",
+    "text": "PACF\n\n# PACF estimates\npacf_result &lt;- pacf(merged_data$value.y, plot = FALSE)\npacf_estimates &lt;- pacf_result$acf[lag_values]\npacf_result &lt;- pacf(merged_data$value.y, main = \"Partial Autocorrelation Function (PACF)\")"
+  },
+  {
+    "objectID": "index.html#ccf",
+    "href": "index.html#ccf",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "CCF",
+    "text": "CCF\n\n# CCF estimates\nccf_result &lt;- ccf(merged_data$value.x, merged_data$value.y, plot = FALSE)\nccf_estimates &lt;- ccf_result$acf[lag_values]\nccf_result &lt;- ccf(merged_data$value.x, merged_data$value.y, main = \"Cross-correlation Function (CCF)\")"
+  },
+  {
+    "objectID": "index.html#acf-pacf-and-ccf",
+    "href": "index.html#acf-pacf-and-ccf",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "ACF, PACF, and CCF",
+    "text": "ACF, PACF, and CCF\n\n# Print estimates\ncat(\"ACF estimates at lags\", lag_values, \":\", acf_estimates, \"\\n\")\n\nACF estimates at lags 1 2 3 : 1 0.9068795 0.871395 \n\ncat(\"PACF estimates at lags\", lag_values, \":\", pacf_estimates, \"\\n\")\n\nPACF estimates at lags 1 2 3 : 0.9068795 0.2757483 0.1290365 \n\ncat(\"CCF estimates at lags\", lag_values, \":\", ccf_estimates, \"\\n\")\n\nCCF estimates at lags 1 2 3 : 0.2609586 0.2835453 0.3017721"
+  },
+  {
+    "objectID": "index.html#correlation-coefficients",
+    "href": "index.html#correlation-coefficients",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Correlation Coefficients",
+    "text": "Correlation Coefficients\n\n# Compute correlation coefficients\ncorrelation_coefficients &lt;- cor(merged_data$value.x, merged_data$value.y)\n\n# Print correlation coefficients\nprint(correlation_coefficients)\n\n[1] 0.8973955"
+  },
+  {
+    "objectID": "index.html#histogram-and-threshold",
+    "href": "index.html#histogram-and-threshold",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Histogram and threshold",
+    "text": "Histogram and threshold\n\nhist(merged_data$value.x, probability = TRUE)\ncurve(dnorm(x, mean = mean(merged_data$value.x), sd = sd(merged_data$value.x)),col = \"red\", lwd = 2, add = TRUE)\nmean_val &lt;- mean(merged_data$value.x)\nstd_val &lt;- sd(merged_data$value.x)\nabline(v = mean_val - std_val, col = \"blue\", lty = 2)\nabline(v = mean_val + std_val, col = \"blue\", lty = 2)\nabline(v = mean_val - 2 * std_val, col = \"green\", lty = 2)\nabline(v = mean_val + 2 * std_val, col = \"green\", lty = 2)"
+  },
+  {
+    "objectID": "index.html#sudden-change",
+    "href": "index.html#sudden-change",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Sudden change",
+    "text": "Sudden change\n\n# Check for sudden drops in dataset x\nthreshold_x &lt;- mean(merged_data$value.x) - (2 * sd(merged_data$value.x))\nfor (i in 1:216) {\n    if (merged_data$value.x[i] - threshold_x &lt; 0) {\n        combined_values &lt;- paste(\"Date:\", merged_data$date[i], \"Index:\", i)\n        print(combined_values)\n    }\n}\n\n[1] \"Date: 2008-12-01 Index: 34\"\n[1] \"Date: 2009-01-01 Index: 35\"\n[1] \"Date: 2009-02-01 Index: 36\"\n[1] \"Date: 2009-03-01 Index: 37\"\n[1] \"Date: 2009-04-01 Index: 38\"\n[1] \"Date: 2009-05-01 Index: 39\"\n[1] \"Date: 2009-06-01 Index: 40\"\n[1] \"Date: 2009-07-01 Index: 41\"\n[1] \"Date: 2009-08-01 Index: 42\"\n[1] \"Date: 2009-09-01 Index: 43\"\n[1] \"Date: 2020-04-01 Index: 170\"\n[1] \"Date: 2020-05-01 Index: 171\"\n[1] \"Date: 2020-06-01 Index: 172\""
+  },
+  {
+    "objectID": "index.html#sudden-change-1",
+    "href": "index.html#sudden-change-1",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Sudden change",
+    "text": "Sudden change\n\n# from the output we assume\nrecession_start_date &lt;- \"2008-12-01\"\nrecession_end_date &lt;- \"2009-09-01\"\ncovid_start_date &lt;- \"2020-04-01\"\ncovid_end_date &lt;- \"2020-06-01\""
+  },
+  {
+    "objectID": "index.html#imputation",
+    "href": "index.html#imputation",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Imputation",
+    "text": "Imputation\n\nmerged_data$value.y_imputed &lt;- merged_data$value.y\nrecession_indices &lt;- which(merged_data$date &gt;= as.Date(recession_start_date) & merged_data$date &lt;= as.Date(recession_end_date))\n\ncovid_indices &lt;- which(merged_data$date &gt;= as.Date(covid_start_date) & merged_data$date &lt;= as.Date(covid_end_date))\nmerged_data$value.y_imputed[recession_indices] &lt;- na_kalman(merged_data$value.y[recession_indices])\nmerged_data$value.y_imputed[covid_indices] &lt;- na_kalman(merged_data$value.y[covid_indices])\nmerged_data$period &lt;- ifelse(merged_data$date &gt;= as.Date(recession_start_date) & merged_data$date &lt;= as.Date(recession_end_date), \"Recession\",\n                             ifelse(merged_data$date &gt;= as.Date(covid_start_date) & merged_data$date &lt;= as.Date(covid_end_date), \"COVID\", \"Other\"))"
+  },
+  {
+    "objectID": "index.html#imputed-plot",
+    "href": "index.html#imputed-plot",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Imputed plot",
+    "text": "Imputed plot\n\n# Plot original and imputed values within recession and COVID periods\nggplot(merged_data, aes(x = date, color = period, linetype = period)) +  geom_line(aes(y = value.y_imputed), size = 1) +  geom_line(aes(y = value.y), linetype = \"dashed\", size = 1) +  labs(title = \"Original vs. Imputed Values (Recession and COVID Periods)\",       x = \"Date\", y = \"Value\", color = \"Period\", linetype = \"Period\") +  theme_minimal() +  scale_color_manual(values = c(\"Recession\" = \"red\", \"COVID\" = \"blue\", \"Other\" = \"black\")) +   scale_linetype_manual(values = c(\"Recession\" = \"solid\", \"COVID\" = \"solid\", \"Other\" = \"dashed\"))"
+  },
+  {
+    "objectID": "index.html#sarima-model",
+    "href": "index.html#sarima-model",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "SARIMA model",
+    "text": "SARIMA model\n\n# Fit the SARIMA model\nsarima_model &lt;- Arima(merged_data$value.y, order = c(0, 1, 0), seasonal = list(order = c(0, 1, 1), period = 12))\n# Diagnostic checks for SARIMA model\nsarima_residuals &lt;- residuals(sarima_model)\nsummary(sarima_model)\n\nSeries: merged_data$value.y \nARIMA(0,1,0)(0,1,1)[12] \n\nCoefficients:\n         sma1\n      -1.0000\ns.e.   0.0804\n\nsigma^2 = 0.05452:  log likelihood = -9.38\nAIC=22.77   AICc=22.83   BIC=29.39\n\nTraining set error measures:\n                       ME      RMSE       MAE         MPE      MAPE     MASE\nTraining set -0.006723987 0.2257929 0.1450348 -0.01829576 0.3650105 1.005886\n                   ACF1\nTraining set -0.3073835\n\nsummary(sarima_residuals)\n\n      Min.    1st Qu.     Median       Mean    3rd Qu.       Max. \n-1.7803817 -0.1143462 -0.0000918 -0.0067240  0.0896389  0.7293845"
+  },
+  {
+    "objectID": "index.html#sarima-model-1",
+    "href": "index.html#sarima-model-1",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "SARIMA model",
+    "text": "SARIMA model\n\n# Forecast using SARIMA model\nsarima_forecast &lt;- forecast(sarima_model, h = 10)\n# Print the forecast\nprint(sarima_forecast)\n\n    Point Forecast    Lo 80    Hi 80    Lo 95    Hi 95\n217       39.75886 39.45096 40.06675 39.28797 40.22975\n218       39.68108 39.24598 40.11618 39.01566 40.34651\n219       39.73109 39.19834 40.26384 38.91632 40.54585\n220       39.74776 39.13268 40.36285 38.80707 40.68845\n221       39.75889 39.07125 40.44652 38.70724 40.81053\n222       39.77001 39.01679 40.52323 38.61805 40.92197\n223       39.79780 38.98426 40.61135 38.55359 41.04201\n224       39.77004 38.90035 40.63973 38.43996 41.10012\n225       39.78117 38.85875 40.70360 38.37044 41.19190\n226       39.78120 38.80889 40.75350 38.29418 41.26821"
+  },
+  {
+    "objectID": "index.html#sarima-model-2",
+    "href": "index.html#sarima-model-2",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "SARIMA model",
+    "text": "SARIMA model\n\nautoplot(sarima_forecast)"
+  },
+  {
+    "objectID": "index.html#sarima-model-3",
+    "href": "index.html#sarima-model-3",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "SARIMA model",
+    "text": "SARIMA model\n\nautoplot(sarima_forecast$mean)"
+  },
+  {
+    "objectID": "index.html#regarima-model",
+    "href": "index.html#regarima-model",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "REGARIMA model",
+    "text": "REGARIMA model\n\n# Fit the REGARIMA model\nregarima_model &lt;- Arima(merged_data$value.y, order = c(1, 1, 2), seasonal = list(order = c(1, 1, 1), period = 12), xreg = merged_data$value.x)\n# Diagnostic checks for REGARIMA model\nregarima_residuals &lt;- residuals(regarima_model)"
+  },
+  {
+    "objectID": "index.html#regarima-model-1",
+    "href": "index.html#regarima-model-1",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "REGARIMA model",
+    "text": "REGARIMA model\n\nsummary(regarima_model)\n\nSeries: merged_data$value.y \nRegression with ARIMA(1,1,2)(1,1,1)[12] errors \n\nCoefficients:\n         ar1      ma1     ma2     sar1     sma1    xreg\n      0.0043  -0.6517  0.0233  -0.1414  -0.9984  0.6474\ns.e.     NaN   0.0510  0.0431   0.0756   0.0551  0.0256\n\nsigma^2 = 0.01172:  log likelihood = 147.35\nAIC=-280.7   AICc=-280.13   BIC=-257.51\n\nTraining set error measures:\n                       ME      RMSE        MAE         MPE      MAPE     MASE\nTraining set -0.006256816 0.1033981 0.07515366 -0.01626222 0.1883955 0.521227\n                    ACF1\nTraining set -0.00216626\n\nsummary(regarima_residuals)\n\n     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. \n-0.334895 -0.055566 -0.000210 -0.006257  0.046478  0.361438"
+  },
+  {
+    "objectID": "index.html#regarima-model-2",
+    "href": "index.html#regarima-model-2",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "REGARIMA model",
+    "text": "REGARIMA model\n\n# Forecast using REGARIMA model\nregarima_forecast &lt;- forecast(regarima_model, xreg = merged_data$value.x[1:10], h = 1)\n# Print the forecast\nprint(regarima_forecast)\n\n    Point Forecast    Lo 80    Hi 80    Lo 95    Hi 95\n217       40.11524 39.97261 40.25787 39.89711 40.33337\n218       40.21816 40.06694 40.36937 39.98689 40.44942\n219       40.18886 40.02856 40.34915 39.94371 40.43401\n220       40.23514 40.06625 40.40403 39.97685 40.49343\n221       40.28106 40.10400 40.45813 40.01026 40.55186\n222       40.22836 40.04348 40.41324 39.94561 40.51111\n223       40.19391 40.00153 40.38629 39.89969 40.48813\n224       40.14511 39.94552 40.34471 39.83986 40.45037\n225       40.10160 39.89504 40.30816 39.78569 40.41750\n226       40.19752 39.98423 40.41082 39.87131 40.52373"
+  },
+  {
+    "objectID": "index.html#regarima-model-3",
+    "href": "index.html#regarima-model-3",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "REGARIMA model",
+    "text": "REGARIMA model\n\nautoplot(regarima_forecast)"
+  },
+  {
+    "objectID": "index.html#regarima-model-4",
+    "href": "index.html#regarima-model-4",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "REGARIMA model",
+    "text": "REGARIMA model\n\nautoplot(regarima_forecast$mean)"
+  },
+  {
+    "objectID": "index.html#plot-of-the-forecasts",
+    "href": "index.html#plot-of-the-forecasts",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Plot of the forecasts",
+    "text": "Plot of the forecasts\n\nfuture_times &lt;- seq(as.Date(\"2024-01-01\"), by=\"month\", length.out=10)\nsarima_forecast_values &lt;- rnorm(10, mean=20, sd=2)\nregarima_forecast_values &lt;- rnorm(10, mean=22, sd=2)\nforecast_df &lt;- data.frame( Time = future_times, SARIMA = sarima_forecast$mean,REGARIMA = regarima_forecast$mean)\nggplot(forecast_df, aes(x = Time)) +  geom_line(aes(y = SARIMA, color = \"SARIMA\")) +\n  geom_line(aes(y = REGARIMA, color = \"REGARIMA\")) +  labs(title = \"Comparison of SARIMA and REGARIMA Forecast Values\",\n       x = \"Time\", y = \"Forecast Value\") +  scale_color_manual(values = c(\"SARIMA\" = \"blue\", \"REGARIMA\" = \"red\")) +  theme_minimal()"
+  },
+  {
+    "objectID": "index.html#forecasts-using-cross-validation-for-multiple-time-horizons",
+    "href": "index.html#forecasts-using-cross-validation-for-multiple-time-horizons",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Forecasts using cross validation for multiple time horizons",
+    "text": "Forecasts using cross validation for multiple time horizons\n\nCross-validation was performed to evaluate the performance of SARIMA and REGARIMA models across multiple time horizons.\nVarious accuracy metrics, including Mean Absolute Error (MAE), Mean Squared Error (MSE), Root Mean Squared Error (RMSE), and Mean Absolute Percentage Error (MAPE), were computed to assess the predictive accuracy of the models."
+  },
+  {
+    "objectID": "index.html#forecasts-using-cross-validation-for-multiple-time-horizons-1",
+    "href": "index.html#forecasts-using-cross-validation-for-multiple-time-horizons-1",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Forecasts using cross validation for multiple time horizons",
+    "text": "Forecasts using cross validation for multiple time horizons\n\n# Define time horizons\nhorizons &lt;- c(1, 3, 6, 12)\n\n# Initialize matrices to store accuracy metrics for SARIMA and REGARIMA models\nsarima_metrics &lt;- matrix(NA, nrow = length(horizons), ncol = 4,\n                         dimnames = list(horizons, c(\"MAE\", \"MSE\", \"RMSE\", \"MAPE\")))\nregarima_metrics &lt;- matrix(NA, nrow = length(horizons), ncol = 4,\n                           dimnames = list(horizons, c(\"MAE\", \"MSE\", \"RMSE\", \"MAPE\")))\n\n# Perform cross-validation for each time horizon\nfor (i in 1:length(horizons)) {\n  horizon &lt;- horizons[i]\n  training_data &lt;- merged_data[1:(nrow(merged_data) - horizon), ]\n  validation_data &lt;- merged_data[(nrow(merged_data) - horizon + 1):nrow(merged_data), ]\n  sarima_model &lt;- Arima(training_data$value.y, order = c(0, 1, 0), seasonal = list(order = c(0, 1, 1), period = 12))\n  regarima_model &lt;- Arima(training_data$value.y, order = c(1, 1, 2),seasonal = list(order = c(1, 1, 1), period = 12), \n                        xreg = training_data$value.x, method = \"ML\",  # Maximum Likelihood estimation\n                        optim.control = list(maxit = 1000))  # Increase max iterations\n  sarima_forecast &lt;- forecast(sarima_model, h = horizon)\n  regarima_forecast &lt;- forecast(regarima_model, xreg = validation_data$value.x, h = horizon)\n  sarima_mae &lt;- mean(abs(sarima_forecast$mean - validation_data$value.y))\n  sarima_mse &lt;- mean((sarima_forecast$mean - validation_data$value.y)^2)\n  sarima_rmse &lt;- sqrt(sarima_mse)\n  sarima_mape &lt;- mean(abs((sarima_forecast$mean - validation_data$value.y) / validation_data$value.y) * 100)\n  regarima_mae &lt;- mean(abs(regarima_forecast$mean - validation_data$value.y))\n  regarima_mse &lt;- mean((regarima_forecast$mean - validation_data$value.y)^2)\n  regarima_rmse &lt;- sqrt(regarima_mse)\n  regarima_mape &lt;- mean(abs((regarima_forecast$mean - validation_data$value.y) / validation_data$value.y) * 100)\n  sarima_metrics[i, ] &lt;- c(sarima_mae, sarima_mse, sarima_rmse, sarima_mape)\n  regarima_metrics[i, ] &lt;- c(regarima_mae, regarima_mse, regarima_rmse, regarima_mape)\n}"
+  },
+  {
+    "objectID": "index.html#forecasts-using-cross-validation-for-multiple-time-horizons-2",
+    "href": "index.html#forecasts-using-cross-validation-for-multiple-time-horizons-2",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Forecasts using cross validation for multiple time horizons",
+    "text": "Forecasts using cross validation for multiple time horizons\n\n# Print accuracy metrics for each model and each time horizon\ncat(\"SARIMA Metrics:\\n\")\n\nSARIMA Metrics:\n\nprint(sarima_metrics)\n\n         MAE        MSE      RMSE      MAPE\n1  0.3176195 0.10088213 0.3176195 0.8000491\n3  0.1804412 0.05215050 0.2283648 0.4569189\n6  0.1735991 0.05669376 0.2381045 0.4386709\n12 0.2698319 0.09414165 0.3068251 0.6792616\n\ncat(\"\\nREGARIMA Metrics:\\n\")\n\n\nREGARIMA Metrics:\n\nprint(regarima_metrics)\n\n          MAE          MSE       RMSE       MAPE\n1  0.02609560 0.0006809804 0.02609560 0.06573199\n3  0.06475416 0.0071253347 0.08441170 0.16399612\n6  0.06507301 0.0049938682 0.07066731 0.16391259\n12 0.13319307 0.0220287677 0.14842091 0.33488203"
+  },
+  {
+    "objectID": "index.html#sarima-metric-plots",
+    "href": "index.html#sarima-metric-plots",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "SARIMA Metric Plots",
+    "text": "SARIMA Metric Plots\n\nsarima_metrics &lt;- data.frame(  MAE = c(0.3176195, 0.1804412, 0.1735991, 0.2698319),\n  MSE = c(0.10088213, 0.05215050, 0.05669376, 0.09414165),  RMSE = c(0.3176195, 0.2283648, 0.2381045, 0.3068251),  MAPE = c(0.8000491, 0.4569189, 0.4386709, 0.6792616),  lag = c(1, 3, 6, 12)\n)\npar(mfrow = c(2, 2))\nfor (metric in c(\"MAE\", \"MSE\", \"RMSE\", \"MAPE\")) {\n  metric_values &lt;- sarima_metrics[[metric]]\n  barplot(metric_values,names.arg = sarima_metrics$lag, xlab = \"Lag\", ylab = metric,  main = paste(\"Metric:\", metric), col = \"steelblue\",ylim = c(0, max(metric_values) + 0.1)) \n}"
+  },
+  {
+    "objectID": "index.html#regarima-metric-plots",
+    "href": "index.html#regarima-metric-plots",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "REGARIMA Metric Plots",
+    "text": "REGARIMA Metric Plots\n\nregarima_metrics &lt;- data.frame(  MAE = c(0.02609560, 0.06475416, 0.06507301, 0.13319307),  MSE = c(0.0006809804, 0.0071253347, 0.0049938682, 0.0220287677),  RMSE = c(0.02609560, 0.08441170, 0.07066731, 0.14842091),  MAPE = c(0.06573199, 0.16399612, 0.16391259, 0.33488203),  lag = c(1, 3, 6, 12)\n)\npar(mfrow = c(2, 2))\nfor (metric in c(\"MAE\", \"MSE\", \"RMSE\", \"MAPE\")) {\n  metric_values &lt;- regarima_metrics[[metric]]\n  barplot(metric_values,names.arg = regarima_metrics$lag, xlab = \"Lag\", ylab = metric,  main = paste(\"Metric:\", metric), col = \"steelblue\",ylim = c(0, max(metric_values) + 0.1))  \n}"
+  },
+  {
+    "objectID": "index.html#thank-you.",
+    "href": "index.html#thank-you.",
+    "title": "Time Series, Midterm Presentation: Production planning and inventory management",
+    "section": "Thank you….",
+    "text": "Thank you…."
+  }
+]
